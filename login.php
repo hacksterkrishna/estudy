@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_type'] = $user['user_type'];
+            $_SESSION['user_valid'] = $user['user_valid'] ?? 'not_valid'; // Default to 'not_valid' if not set
             $_SESSION['first_name'] = $user['first_name'];
 
             if (in_array($user['user_type'], ['student', 'trainer'])) {
@@ -90,9 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
             <button type="submit" class="btn btn-primary w-100">Log In</button>
         </form>
-        <div class="mt-3 text-center">
+        <!-- <div class="mt-3 text-center">
             If you don’t have an account <a href="register.php">Register</a>
-        </div>
+        </div> -->
     </div>
 </div>
 

@@ -1,6 +1,13 @@
 <?php
 // File: register.php
 session_start();
+// Auto-redirect to pay_order.php if user is already logged in and package_id is present
+if (isset($_SESSION['user_id']) && $_SESSION['user_type'] = 'student' && isset($_GET['package_id'])) {
+    header("Location: pay_order.php?package_id=" . intval($_GET['package_id']));
+    exit;
+}
+
+
 require 'includes/connect.php';
 include 'common/header.php';
 include 'common/navbar.php';
@@ -8,22 +15,48 @@ include 'common/navbar.php';
 $countries = $conn->query("SELECT id, name FROM countries ORDER BY name ASC");
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+
+    $package_id = isset($_POST['package_id']) ? intval($_POST['package_id']) : 0;
+
     $first_name = trim($_POST['first_name']);
+    $middle_name = trim($_POST['middle_name']);
     $last_name = trim($_POST['last_name']);
     $email = trim($_POST['email']);
+    $phone = trim($_POST['phone']);
+    $gender = trim($_POST['gender']);
+    $country_id = trim($_POST['country_id']);
+    $state_id = trim($_POST['state_id']);
+    $dob = trim($_POST['dob']);
+    $discount_code = trim($_POST['discount_code']);
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
 
-    $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, user_type) VALUES (?, ?, ?, ?, 'student')");
-    $stmt->bind_param("ssss", $first_name, $last_name, $email, $password);
+    // Check if email already exists
+    $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
+    $check->bind_param("s", $email);
+    $check->execute();
+    $check->store_result();
 
-    if ($stmt->execute()) {
-        $_SESSION['success'] = "Registration successful. You can login now.";
-        header("Location: login.php");
-        exit;
+    if ($check->num_rows > 0) {
+        $error = "Email is already registered. Please login or use another email.";
     } else {
-        $error = "Something went wrong. Try again.";
+
+        $stmt = $conn->prepare("INSERT INTO users (first_name, middle_name, last_name, email, password, phone, gender, country_id, state_id, dob, discount_code, user_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'student')");
+        $stmt->bind_param("sssssssssss", $first_name, $middle_name, $last_name, $email, $password, $phone, $gender, $country_id, $state_id, $dob, $discount_code);
+
+        if ($stmt->execute()) {
+            $new_user_id = $stmt->insert_id;
+            $_SESSION['user_id'] = $new_user_id;
+            $_SESSION['user_type'] = 'student'; // Optional: if you want to check roles later
+            $_SESSION['user_valid'] = 'not_valid'; // Set to not valid until payment is confirmed
+            header("Location: pay_order.php?package_id=" . $package_id);
+            exit;
+        } else {
+            $error = "Something went wrong. Try again.";
+        }
     }
+    $check->close();
 }
+
 ?>
 
 <style>
@@ -64,11 +97,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <?php if (isset($error)) echo "<div class='alert alert-danger'>$error</div>"; ?>
         <form method="POST">
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <input type="hidden" name="package_id" value="<?php echo isset($_GET['package_id']) ? intval($_GET['package_id']) : ''; ?>">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">First Name</label>
                     <input type="text" name="first_name" class="form-control" required>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Middle Name</label>
+                    <input type="text" name="middle_name" class="form-control" >
+                </div>
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Last Name</label>
                     <input type="text" name="last_name" class="form-control" required>
                 </div>
@@ -103,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <label class="form-label">Gender</label>
                     <select name="gender" class="form-select">
                         <option value="">Select your gender</option>
-                        <option value="male">Male</option>
+                        <option value="male" selected>Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
                     </select>
@@ -124,6 +162,46 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="col-md-4 mb-3 d-flex align-items-end">
                     <button type="button" class="btn btn-outline-primary w-100">Apply Code</button>
                 </div>
+                <!-- Package Details Section -->
+                <?php
+                if (isset($_GET['package_id']) && is_numeric($_GET['package_id'])) {
+                    $pkg_id = intval($_GET['package_id']);
+                    $pkg_sql = $conn->prepare("SELECT title, price FROM packages WHERE id = ?");
+                    $pkg_sql->bind_param("i", $pkg_id);
+                    $pkg_sql->execute();
+                    $pkg_sql->bind_result($pkg_name, $pkg_price);
+                    if ($pkg_sql->fetch()) {
+                        $tax = round($pkg_price * 0.13);
+                        $total = $pkg_price + $tax;
+                ?>
+                    <div class="col-12 mb-4">
+                        <div class="border p-3 bg-light rounded">
+                            <h5>Your Order Details</h5>
+                            <table class="table table-sm table-bordered mt-2">
+                                <tr>
+                                    <th>Package Name:</th>
+                                    <td><?php echo htmlspecialchars($pkg_name); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Quantity:</th>
+                                    <td>1</td>
+                                </tr>
+                                <tr>
+                                    <th>Price:</th>
+                                    <td><del>₹<?php echo $pkg_price + $tax; ?></del> ₹<?php echo $pkg_price; ?> + ₹<?php echo $tax; ?> (Vat included 13%)</td>
+                                </tr>
+                                <tr>
+                                    <th>Total:</th>
+                                    <td>₹<?php echo $total; ?></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                <?php
+                    }
+                    $pkg_sql->close();
+                }
+                ?>
                 <div class="col-12 mb-3">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="termsCheck">
@@ -146,7 +224,7 @@ const stateDropdown = document.getElementById('state');
 countryDropdown.addEventListener('change', function () {
     const countryId = this.value;
     stateDropdown.innerHTML = '<option value="">Loading...</option>';
-    fetch(`get-states.php?country_id=${countryId}`)
+    fetch(`common/get-states.php?country_id=${countryId}`)
         .then(res => res.json())
         .then(data => {
             stateDropdown.innerHTML = '<option value="">Select State</option>';

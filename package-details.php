@@ -1,11 +1,12 @@
 <?php
 session_start();
 $pageTitle = "Package Details";
+include 'includes/connect.php';
 include 'common/header.php';
 include 'common/navbar.php';
-include 'includes/connect.php';
 
-$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+
+$id = isset($_GET['package_id']) ? (int) $_GET['package_id'] : 0;
 if ($id <= 0) {
   echo "<div class='container py-5'><div class='alert alert-danger'>Invalid Package ID.</div></div>";
   include 'common/footer.php';
@@ -30,7 +31,7 @@ $package = $result->fetch_assoc();
   <div class="container">
     <div class="row g-5">
       <div class="col-md-6">
-        <img src="assets/img/packages/<?php echo $package['image']; ?>" alt="<?php echo $package['title']; ?>" class="img-fluid rounded shadow">
+        <img src="assets/img/<?php echo $package['image']; ?>" alt="<?php echo $package['title']; ?>" class="img-fluid rounded shadow">
       </div>
       <div class="col-md-6">
         <h2><?php echo $package['title']; ?></h2>
@@ -42,7 +43,7 @@ $package = $result->fetch_assoc();
           <li><i class="bi bi-check2 text-success"></i> Lifetime access to training platform</li>
           <li><i class="bi bi-check2 text-success"></i> Earnings up to Y range</li>
         </ul>
-        <a href="buy-package.php?id=<?php echo $package['id']; ?>" class="btn btn-primary mt-3">Buy This Package</a>
+        <a href="register.php?package_id=<?php echo $package['id']; ?>" class="btn btn-primary mt-3">Buy This Package</a>
       </div>
     </div>
   </div>

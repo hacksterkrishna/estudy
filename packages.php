@@ -1,9 +1,9 @@
 <?php
 session_start();
 $pageTitle = "Packages";
+require 'includes/connect.php';
 include 'common/header.php';
 include 'common/navbar.php';
-include 'includes/connect.php';
 
 $sql = "SELECT * FROM packages WHERE status = 'active' ORDER BY price DESC";
 $result = $conn->query($sql);
@@ -30,8 +30,8 @@ $result = $conn->query($sql);
               </ul>
             </div>
             <div class="card-footer bg-white d-flex justify-content-between">
-              <a href="package-details.php?id=<?php echo $row['id']; ?>" class="btn btn-outline-primary">Package Details</a>
-              <a href="buy-package.php?id=<?php echo $row['id']; ?>" class="btn btn-primary">Buy Package</a>
+              <a href="package-details.php?package_id=<?php echo $row['id']; ?>" class="btn btn-outline-primary">Package Details</a>
+              <a href="register.php?package_id=<?php echo $row['id']; ?>" class="btn btn-primary">Buy Package</a>
             </div>
           </div>
         </div>

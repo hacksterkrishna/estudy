@@ -1,7 +1,6 @@
 <?php
 // common/header.php
 
-require_once '../includes/connect.php';
 $site = $conn->query("SELECT * FROM settings LIMIT 1")->fetch_assoc();
 
 ?>
